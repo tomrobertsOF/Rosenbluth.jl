@@ -1,0 +1,13 @@
+name = "Rosenbluth"
+uuid = "ccaa1f9c-055d-4c5e-8e40-d5dcb2253666"
+authors = ["Tom Roberts"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
