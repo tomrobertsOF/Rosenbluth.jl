@@ -3,6 +3,9 @@ uuid = "ccaa1f9c-055d-4c5e-8e40-d5dcb2253666"
 authors = ["Tom Roberts"]
 version = "1.0.0-DEV"
 
+[deps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
 [compat]
 julia = "1.6.7"
 
