@@ -52,5 +52,15 @@ Contributions to Rosenbluth.jl are very welcome! If you have a suggestion for an
 ## License
 Rosenbluth.jl is licensed under the MIT License. See the LICENSE file for more details.
 
-## Acknowledgments
-This project was inspired by the pioneering work of Marshall N. Rosenbluth and Arianna W. Rosenbluth in the field of statistical mechanics and Monte Carlo methods.
+## TODO
+
+- [ ] Finalize the core API for the sampling algorithms.
+- [x] Implement the basic Rosenbluth and Rosenbluth (RR) sampling algorithm.
+- [x] Add support for the pruned-enriched Rosenbluth method (PERM).
+- [ ] Create a suite of examples demonstrating the use of each algorithm.
+- [ ] Set up a testing framework and add initial unit tests.
+- [ ] Optimize the performance of the algorithms for large-scale simulations.
+- [ ] Allow smart optimizations by flags or properties of the model
+- [ ] Document the API and provide a getting started guide for new users.
+- [ ] Set up continuous integration (CI) to automate testing and ensure code quality.
+
