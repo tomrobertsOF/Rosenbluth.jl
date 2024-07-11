@@ -34,7 +34,7 @@ end
 function size(model::Model)::Int
     ...
 end
-function grow(model::Model)
+function grow!(model::Model)
     ...
 end
 ```
