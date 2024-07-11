@@ -22,7 +22,28 @@ Pkg.add("Rosenbluth")
 ```
 
 ## Usage
-Here is a simple example to get you started with Rosenbluth.jl:
+To begin, define your model as deriving from `RosenbluthSampleable` and implement methods for `atmosphere`, `size` and `grow!`.
+
+```julia
+using Rosenbluth
+struct Model <: RosenbluthSampleable
+    ...
+end
+function atmosphere(model::Model)::Int
+    ...
+end
+function size(model::Model)::Int
+    ...
+end
+function grow(model::Model)
+    ...
+end
+```
+
+You can then call one of the sampling functions, for example:
+```julia
+sample(Model, max_size, num_runs)
+```
 
 For more detailed examples and usage instructions, please refer to the documentation.
 
