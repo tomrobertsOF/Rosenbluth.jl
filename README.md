@@ -7,10 +7,9 @@ Rosenbluth.jl is a Julia library designed to provide a comprehensive suite of sa
 ## Features
 
 - Implementation of the original Rosenbluth and Rosenbluth (RR) algorithm for chain molecule simulations.
-- Advanced sampling techniques including the pruned-enriched Rosenbluth method (PERM) for more efficient sampling in systems with phase transitions.
+- Advanced sampling techniques including the pruned-enriched Rosenbluth method (PERM) and the generalized atmospheric Rosenbluth method (GARM)
 - Support for both serial and parallel execution to leverage multi-core processors and distributed computing environments.
-- Extensible design allowing for the easy addition of new sampling algorithms and strategies.
-- Comprehensive documentation and examples to help users get started quickly.
+- Minimal design allowing for easy use on any model
 
 ## Installation
 
