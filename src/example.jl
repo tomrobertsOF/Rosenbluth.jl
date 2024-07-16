@@ -38,6 +38,8 @@ function Rosenbluth.size(model::SAW2D)
     return length(model.history)
 end
 
+sample(SAW2D, 10, 1000, prune_enrich=true)
+
 
 mutable struct BinaryTree <: GARMSampleable
     n::Int
@@ -61,6 +63,8 @@ function Rosenbluth.grow!(model::BinaryTree)
     return
 end
 
+sample(BinaryTree, 10, 100000, prune_enrich=true)
+
 Point2D = Tuple{Int, Int}
 function ==(a::Point2D, b::Point2D)
     return all(a .== b)
@@ -74,6 +78,7 @@ function getoccupiedneighbors(p::Point2D, occupied::Set{Point2D})
 end
 
 struct SiteTree <: GARMSampleable
+    history::Vector{Point2D}
     occupied::Set{Point2D}
     growth_candidates::Set{Point2D}
     shrink_candidates::Set{Point2D}
@@ -90,7 +95,7 @@ function Base.iterate(model::SiteTree, state=1)
         return model.shrink_candidates, nothing
     end
 end
-SiteTree() = SiteTree(Set{Point2D}(), Set{Point2D}([(0,0)]), Set{Point2D}())
+SiteTree() = SiteTree(Vector{Point2D}(), Set{Point2D}(), Set{Point2D}([(0,0)]), Set{Point2D}())
 function Rosenbluth.positive_atmosphere(model::SiteTree)
     return length(model.growth_candidates)
 end
@@ -100,8 +105,11 @@ end
 function Rosenbluth.size(model::SiteTree)
     return length(model.occupied)
 end
+max_hashes = Dict{Int, Int}()
 function Rosenbluth.grow!(model::SiteTree)
     new_site = rand(model.growth_candidates)
+
+    push!(model.history, new_site)
 
     occupied, growth_candidates, shrink_candidates = model
     push!(occupied, new_site)
@@ -131,5 +139,39 @@ function Rosenbluth.grow!(model::SiteTree)
     end
 end
 
+function Rosenbluth.max_aplus(::Type{SiteTree}, max_size::Int)
+    2 * (max_size + 1) + 4
+end
+function Rosenbluth.max_aminus(::Type{SiteTree}, max_size::Int)
+    (max_size + 2) ÷ 4 + (max_size + 1) ÷ 4 + 2
+end
 
-w, s = sample(SiteTree, 50, 10000, prune_enrich=true)
+function Rosenbluth.shrink!(model::SiteTree)
+    removed_site = pop!(model.history)
+
+    occupied, growth_candidates, shrink_candidates = model
+    delete!(occupied, removed_site)
+    # Remove from a_minus
+    delete!(shrink_candidates, removed_site)
+    # Add removed site to a_plus
+    push!(growth_candidates, removed_site)
+    
+    for neighbor in neighbors(removed_site)
+        if neighbor in growth_candidates
+            delete!(growth_candidates, neighbor)
+        end
+
+        if length(getoccupiedneighbors(neighbor, occupied)) == 1
+            if neighbor in occupied
+                push!(shrink_candidates, neighbor)
+            else
+                push!(growth_candidates, neighbor)
+            end
+        end
+    end
+end
+
+using BenchmarkTools
+
+@btime Rosenbluth.growshrinkgarm(SiteTree, 10, 1000)
+@btime Rosenbluth.pegarm(SiteTree, 100, 1000)
