@@ -1,7 +1,7 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample
+export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm
 abstract type GARMSampleable end
 abstract type RosenbluthSampleable <: GARMSampleable end
 

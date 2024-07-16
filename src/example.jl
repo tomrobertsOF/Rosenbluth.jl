@@ -1,13 +1,15 @@
 using Revise
 using Rosenbluth
 
+import Rosenbluth: grow!, shrink!, atmosphere, positive_atmosphere, negative_atmosphere, size
+
 import Base: iterate, length, +, ==
 
 struct SAW2D <: RosenbluthSampleable
     history::Vector{Tuple{Int,Int}}
 end
 SAW2D() = SAW2D([])
-function Rosenbluth.atmosphere(model::SAW2D)::Int
+function atmosphere(model::SAW2D)::Int
     if isempty(model.history)
         return 1
     end
@@ -17,7 +19,7 @@ function Rosenbluth.atmosphere(model::SAW2D)::Int
     neighbors = [(endpoint[1] + direction[1], endpoint[2] + direction[2]) for direction in directions]
     return sum([neighbor ∉ model.history for neighbor in neighbors])
 end
-function Rosenbluth.grow!(model::SAW2D)
+function grow!(model::SAW2D)
     if isempty(model.history)
         push!(model.history, (0, 0))
         return
@@ -34,7 +36,7 @@ function Rosenbluth.grow!(model::SAW2D)
     push!(model.history, neighbor)
     return
 end
-function Rosenbluth.size(model::SAW2D)
+function size(model::SAW2D)
     return length(model.history)
 end
 
@@ -46,16 +48,16 @@ mutable struct BinaryTree <: GARMSampleable
     k::Int
 end
 BinaryTree() = BinaryTree(0, 0)
-function Rosenbluth.positive_atmosphere(model::BinaryTree)
+function positive_atmosphere(model::BinaryTree)
     return model.n + 1
 end
-function Rosenbluth.negative_atmosphere(model::BinaryTree)
+function negative_atmosphere(model::BinaryTree)
     return model.k
 end
-function Rosenbluth.size(model::BinaryTree)
+function size(model::BinaryTree)
     return model.n
 end
-function Rosenbluth.grow!(model::BinaryTree)
+function grow!(model::BinaryTree)
     if rand() > 2 * model.k // (model.n + 1)
         model.k += 1
     end
@@ -96,17 +98,17 @@ function Base.iterate(model::SiteTree, state=1)
     end
 end
 SiteTree() = SiteTree(Vector{Point2D}(), Set{Point2D}(), Set{Point2D}([(0,0)]), Set{Point2D}())
-function Rosenbluth.positive_atmosphere(model::SiteTree)
+function positive_atmosphere(model::SiteTree)
     return length(model.growth_candidates)
 end
-function Rosenbluth.negative_atmosphere(model::SiteTree)
+function negative_atmosphere(model::SiteTree)
     return length(model.shrink_candidates)
 end
-function Rosenbluth.size(model::SiteTree)
+function size(model::SiteTree)
     return length(model.occupied)
 end
 max_hashes = Dict{Int, Int}()
-function Rosenbluth.grow!(model::SiteTree)
+function grow!(model::SiteTree)
     new_site = rand(model.growth_candidates)
 
     push!(model.history, new_site)
@@ -139,14 +141,14 @@ function Rosenbluth.grow!(model::SiteTree)
     end
 end
 
-function Rosenbluth.max_aplus(::Type{SiteTree}, max_size::Int)
+function max_aplus(::Type{SiteTree}, max_size::Int)
     2 * (max_size + 1) + 4
 end
-function Rosenbluth.max_aminus(::Type{SiteTree}, max_size::Int)
+function max_aminus(::Type{SiteTree}, max_size::Int)
     (max_size + 2) ÷ 4 + (max_size + 1) ÷ 4 + 2
 end
 
-function Rosenbluth.shrink!(model::SiteTree)
+function shrink!(model::SiteTree)
     removed_site = pop!(model.history)
 
     occupied, growth_candidates, shrink_candidates = model
@@ -173,5 +175,5 @@ end
 
 using BenchmarkTools
 
-@btime Rosenbluth.growshrinkgarm(SiteTree, 10, 1000)
+@btime growshrinkgarm(SiteTree, 10, 1000)
 @btime Rosenbluth.pegarm(SiteTree, 100, 1000)
