@@ -1,7 +1,7 @@
 using Revise
 using Rosenbluth
 
-import Rosenbluth: grow!, shrink!, atmosphere, positive_atmosphere, negative_atmosphere, size
+import Rosenbluth: grow!, shrink!, atmosphere, positive_atmosphere, negative_atmosphere, size, atmosphericflattening
 
 import Base: iterate, length, +, ==
 
@@ -40,7 +40,7 @@ function size(model::SAW2D)
     return length(model.history)
 end
 
-sample(SAW2D, 10, 1000, prune_enrich=true)
+# sample(SAW2D, 10, 1000, prune_enrich=true)
 
 
 mutable struct BinaryTree <: GARMSampleable
@@ -65,7 +65,7 @@ function grow!(model::BinaryTree)
     return
 end
 
-sample(BinaryTree, 10, 100000, prune_enrich=true)
+# sample(BinaryTree, 10, 100000, prune_enrich=true)
 
 Point2D = Tuple{Int, Int}
 function ==(a::Point2D, b::Point2D)
@@ -107,7 +107,6 @@ end
 function size(model::SiteTree)
     return length(model.occupied)
 end
-max_hashes = Dict{Int, Int}()
 function grow!(model::SiteTree)
     new_site = rand(model.growth_candidates)
 
@@ -175,5 +174,14 @@ end
 
 using BenchmarkTools
 
-@btime growshrinkgarm(SiteTree, 10, 1000)
-@btime Rosenbluth.pegarm(SiteTree, 100, 1000)
+# @btime growshrinkgarm(SiteTree, 10, 1000)
+# @btime Rosenbluth.pegarm(SiteTree, 100, 1000)
+
+
+function Rosenbluth.bin_dimensions(::Type{SiteTree}, max_size::Int)
+    #return (2 * (max_size + 1) + 4, (max_size + 2) ÷ 4 + (max_size + 1) ÷ 4 + 2)
+    return ()
+end
+
+s, w = Rosenbluth.flatgarm(SiteTree, 100, 10000, (100,), model -> (size(model)))#, positive_atmosphere(model), negative_atmosphere(model)))
+

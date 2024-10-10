@@ -1,7 +1,7 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm
+export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
 abstract type GARMSampleable end
 abstract type RosenbluthSampleable <: GARMSampleable end
 
@@ -196,6 +196,58 @@ function max_aminus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("max_aminus not implemented for $(typeof(T))"))
 end
 
+function bin_dimensions(::Type{T}, max_size::Int) where {T<:GARMSampleable}
+    throw(ArgumentError("bin_dimensions not implemented for $(typeof(T))"))
+end
+
+function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
+    weights = zeros(Float64, results_dimensions)
+    samples = zeros(Int, results_dimensions)
+    started_tours = 0
+
+    for t in 1:num_tours
+        println("Tour: ", t)
+        enrichment_stack = Vector{Tuple{T,Float64}}()
+        push!(enrichment_stack, (T(), 1.0))
+
+        while !isempty(enrichment_stack)
+            model, weight = pop!(enrichment_stack)
+
+            weight *= positive_atmosphere(model)
+            if weight == 0
+                continue
+            end
+            grow!(model)
+            weight /= negative_atmosphere(model)
+
+            n = size(model)
+            bin_index = bin_function(model)
+            weights[bin_index...] += weight
+            samples[bin_index...] += 1
+
+            if (n == 1)
+                started_tours += 1
+            end
+
+            if n >= max_size
+                continue
+            end
+
+            ratio = weight * started_tours / weights[bin_index...]
+            p = ratio % 1
+            copies = floor(Int, ratio)
+            if rand() < p
+                copies += 1
+            end
+
+            for _ in 1:copies
+                push!(enrichment_stack, (deepcopy(model), weight / ratio))
+            end
+        end
+    end
+
+    return weights ./ num_tours, samples
+end
 
 function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
     results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
