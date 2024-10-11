@@ -204,6 +204,8 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Fun
     enrichment_stack = Vector{Tuple{T,Float64}}()
     push!(enrichment_stack, (T(), 1.0))
 
+    started_tours = weights[bin_function(first(enrichment_stack))...] + 1
+
     while !isempty(enrichment_stack)
         model, weight = pop!(enrichment_stack)
 
@@ -218,10 +220,6 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Fun
         bin_index = bin_function(model)
         weights[bin_index...] += weight
         samples[bin_index...] += 1
-
-        if (n == 1)
-            started_tours += 1
-        end
 
         if n >= max_size
             continue
@@ -243,7 +241,6 @@ end
 function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
     weights = zeros(Float64, results_dimensions)
     samples = zeros(Int, results_dimensions)
-    started_tours = 0
 
     for t in 1:num_tours
         println("Tour: ", t)
