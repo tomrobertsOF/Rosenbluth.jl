@@ -204,7 +204,7 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Fun
     enrichment_stack = Vector{Tuple{T,Float64}}()
     push!(enrichment_stack, (T(), 1.0))
 
-    started_tours = sum(weights[1,:,:])
+    started_tours = sum(samples[1,:,:]) + 1
 
     while !isempty(enrichment_stack)
         model, weight = pop!(enrichment_stack)
@@ -258,6 +258,63 @@ end
 
 function shrink!(model::GARMSampleable)
     throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
+end
+
+function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, bin_function::Function) where {T<:GARMSampleable}
+    model = T()
+    weight = zeros(Float64, max_size)
+    copies = zeros(Int, max_size)
+
+    started_tours = sum(samples[1,:,:]) + 1
+
+    enrichment_stack = Vector{Bool}()
+    push!(enrichment_stack, true)
+
+    while (size(model) != 1 || !isempty(enrichment_stack))
+        
+        n = size(model)
+        prev_aplus = positive_atmosphere(model)
+
+        if prev_aplus > 0
+            if n > 0
+                copies[n] -= 1
+            end
+            pop!(enrichment_stack)
+            grow!(model)
+            n = size(model)
+            bin_index = bin_function(model)
+
+            weight[n] = (n > 1 ? weight[n-1] : 1)
+            weight[n] *= prev_aplus
+            weight[n] /= negative_atmosphere(model)
+
+            weights[bin_index...] += weight[n]
+            samples[bin_index...] += 1
+        end
+
+        if (n >= max_size || prev_aplus == 0)
+            copies[n] = 0
+        else
+            ratio = weight[n] * samples[1] / weights[bin_index]
+            p = ratio % 1
+            copies[n] = floor(Int, ratio)
+            if rand() < p
+                copies[n] += 1
+            end
+
+            for _ in 1:copies[n]
+                push!(enrichment_stack, true)
+            end
+
+            weight[n] /= ratio
+        end
+        if (copies[n] == 0)
+            while (n > 1 && copies[n] == 0)
+                shrink!(model)
+                n = size(model)
+            end
+        end
+    end
 end
 
 function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GARMSampleable}
