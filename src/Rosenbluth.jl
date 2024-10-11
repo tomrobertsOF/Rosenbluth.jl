@@ -200,11 +200,9 @@ function bin_dimensions(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("bin_dimensions not implemented for $(typeof(T))"))
 end
 
-function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Function) where {T<:GARMSampleable}
+function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
     enrichment_stack = Vector{Tuple{T,Float64}}()
     push!(enrichment_stack, (T(), 1.0))
-
-    started_tours = sum(samples[1,:,:]) + 1
 
     while !isempty(enrichment_stack)
         model, weight = pop!(enrichment_stack)
@@ -244,7 +242,7 @@ function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::
 
     for t in 1:num_tours
         println("Tour: ", t)
-        flattour!(T, max_size, weights, samples, bin_function)
+        flattour!(T, max_size, weights, samples, t, bin_function)
     end
 
     return weights ./ num_tours, samples
