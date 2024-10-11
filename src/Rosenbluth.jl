@@ -293,7 +293,7 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
         if (n >= max_size || prev_aplus == 0)
             copies[n] = 0
         else
-            ratio = weight[n] * samples[1] / weights[bin_index...]
+            ratio = weight[n] * started_tours / weights[bin_index...]
             p = ratio % 1
             copies[n] = floor(Int, ratio)
             if rand() < p
