@@ -204,7 +204,7 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Fun
     enrichment_stack = Vector{Tuple{T,Float64}}()
     push!(enrichment_stack, (T(), 1.0))
 
-    started_tours = weights[bin_function(T())...] + 1
+    started_tours = sum(weights[1,:,:])
 
     while !isempty(enrichment_stack)
         model, weight = pop!(enrichment_stack)
