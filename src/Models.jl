@@ -38,7 +38,7 @@ function getoccupiedneighbors(p::Point2D, occupied::Set{Point2D})
     return Set{Point2D}(filter(neighbor -> neighbor in occupied, neighbors(p)))
 end
 
-struct SiteTree <: GARMSampleable
+struct SiteTree <: GrowShrinkSampleable
     history::Vector{Point2D}
     occupied::Set{Point2D}
     growth_candidates::Set{Point2D}

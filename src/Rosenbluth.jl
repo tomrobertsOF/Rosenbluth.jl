@@ -1,7 +1,7 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
+export RosenbluthSampleable, GARMSampleable, GrowShrinkSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
 abstract type GARMSampleable end
 abstract type RosenbluthSampleable <: GARMSampleable end
 
@@ -258,12 +258,10 @@ function shrink!(model::GARMSampleable)
     throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
 end
 
-function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, bin_function::Function) where {T<:GARMSampleable}
+function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GrowShrinkSampleable}
     model = T()
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
-
-    started_tours = sum(samples[1,:,:]) + 1
 
     enrichment_stack = Vector{Bool}()
     push!(enrichment_stack, true)
@@ -293,7 +291,7 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, bin_fun
         if (n >= max_size || prev_aplus == 0)
             copies[n] = 0
         else
-            ratio = weight[n] * samples[1] / weights[bin_index]
+            ratio = weight[n] * samples[1] / weights[bin_index...]
             p = ratio % 1
             copies[n] = floor(Int, ratio)
             if rand() < p
@@ -315,7 +313,9 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, bin_fun
     end
 end
 
-function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GARMSampleable}
+abstract type GrowShrinkSampleable <: GARMSampleable end
+
+function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GrowShrinkSampleable}
     model = T()
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
@@ -369,7 +369,7 @@ function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:G
     end
 end
 
-function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GrowShrinkSampleable}
     weights = zeros(Float64, max_size)
     samples = zeros(Int, max_size)
 
@@ -378,6 +378,24 @@ function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARM
     end
 
     return weights ./ num_tours, samples
+end
+
+function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GrowShrinkSampleable}
+    weights = zeros(Float64, results_dimensions)
+    samples = zeros(Int, results_dimensions)
+
+    for t in 1:num_tours
+        println("Tour: ", t)
+        flatgrowshrinktour!(T, max_size, weights, samples, t, bin_function)
+    end
+
+    return weights ./ num_tours, samples
+end
+
+function growshrinkatmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GrowShrinkSampleable}
+    results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
+
+    return growshrinkflatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
 end
 
 include("Models.jl")
