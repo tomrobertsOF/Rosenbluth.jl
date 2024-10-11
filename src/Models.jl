@@ -1,72 +1,30 @@
-using Revise
-using Rosenbluth
-using Rosenbluth.Models
+module Models
 
-import Rosenbluth: grow!, shrink!, atmosphere, positive_atmosphere, negative_atmosphere, size, atmosphericflattening
+using ..Rosenbluth
 
 import Base: iterate, length, +, ==
-
-struct SAW2D <: RosenbluthSampleable
-    history::Vector{Tuple{Int,Int}}
-end
-SAW2D() = SAW2D([])
-function atmosphere(model::SAW2D)::Int
-    if isempty(model.history)
-        return 1
-    end
-
-    directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-    endpoint = model.history[end]
-    neighbors = [(endpoint[1] + direction[1], endpoint[2] + direction[2]) for direction in directions]
-    return sum([neighbor ∉ model.history for neighbor in neighbors])
-end
-function grow!(model::SAW2D)
-    if isempty(model.history)
-        push!(model.history, (0, 0))
-        return
-    end
-
-    directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-    endpoint = model.history[end]
-    neighbors = [(endpoint[1] + direction[1], endpoint[2] + direction[2]) for direction in directions]
-    neighbors = [neighbor for neighbor in neighbors if neighbor ∉ model.history]
-    if length(neighbors) == 0
-        throw(ArgumentError("No neighbors to grow to"))
-    end
-    neighbor = neighbors[rand(1:length(neighbors))]
-    push!(model.history, neighbor)
-    return
-end
-function size(model::SAW2D)
-    return length(model.history)
-end
-
-# sample(SAW2D, 10, 1000, prune_enrich=true)
-
 
 mutable struct BinaryTree <: GARMSampleable
     n::Int
     k::Int
 end
 BinaryTree() = BinaryTree(0, 0)
-function positive_atmosphere(model::BinaryTree)
+function Rosenbluth.positive_atmosphere(model::BinaryTree)
     return model.n + 1
 end
-function negative_atmosphere(model::BinaryTree)
+function Rosenbluth.negative_atmosphere(model::BinaryTree)
     return model.k
 end
-function size(model::BinaryTree)
+function Rosenbluth.size(model::BinaryTree)
     return model.n
 end
-function grow!(model::BinaryTree)
+function Rosenbluth.grow!(model::BinaryTree)
     if rand() > 2 * model.k // (model.n + 1)
         model.k += 1
     end
     model.n += 1
     return
 end
-
-# sample(BinaryTree, 10, 100000, prune_enrich=true)
 
 Point2D = Tuple{Int, Int}
 function ==(a::Point2D, b::Point2D)
@@ -99,16 +57,16 @@ function Base.iterate(model::SiteTree, state=1)
     end
 end
 SiteTree() = SiteTree(Vector{Point2D}(), Set{Point2D}(), Set{Point2D}([(0,0)]), Set{Point2D}())
-function positive_atmosphere(model::SiteTree)
+function Rosenbluth.positive_atmosphere(model::SiteTree)
     return length(model.growth_candidates)
 end
-function negative_atmosphere(model::SiteTree)
+function Rosenbluth.negative_atmosphere(model::SiteTree)
     return length(model.shrink_candidates)
 end
-function size(model::SiteTree)
+function Rosenbluth.size(model::SiteTree)
     return length(model.occupied)
 end
-function grow!(model::SiteTree)
+function Rosenbluth.grow!(model::SiteTree)
     new_site = rand(model.growth_candidates)
 
     push!(model.history, new_site)
@@ -141,14 +99,7 @@ function grow!(model::SiteTree)
     end
 end
 
-function Rosenbluth.max_aplus(::Type{SiteTree}, max_size::Int)
-    2 * (max_size + 1) + 4
-end
-function Rosenbluth.max_aminus(::Type{SiteTree}, max_size::Int)
-    (max_size + 2) ÷ 4 + (max_size + 1) ÷ 4 + 2
-end
-
-function shrink!(model::SiteTree)
+function Rosenbluth.shrink!(model::SiteTree)
     removed_site = pop!(model.history)
 
     occupied, growth_candidates, shrink_candidates = model
@@ -173,11 +124,4 @@ function shrink!(model::SiteTree)
     end
 end
 
-using BenchmarkTools
-
-# @btime growshrinkgarm(SiteTree, 10, 1000)
-# @btime Rosenbluth.pegarm(SiteTree, 100, 1000)
-
-#s, w = Rosenbluth.growshrinkgarm(SiteTree, 10, 1000)
-
-Rosenbluth.sample(Models.SiteTree, 10, 1000, prune_enrich=true)
+end

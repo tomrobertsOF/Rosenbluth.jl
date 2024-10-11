@@ -328,4 +328,6 @@ function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARM
     return weights ./ num_tours, samples
 end
 
+include("Models.jl")
+
 end
