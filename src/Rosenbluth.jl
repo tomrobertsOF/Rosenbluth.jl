@@ -201,7 +201,6 @@ function bin_dimensions(::Type{T}, max_size::Int) where {T<:GARMSampleable}
 end
 
 function flattour!(::Type{T}, max_size::Int, weights, samples, bin_function::Function) where {T<:GARMSampleable}
-    println("Tour: ", t)
     enrichment_stack = Vector{Tuple{T,Float64}}()
     push!(enrichment_stack, (T(), 1.0))
 
@@ -247,6 +246,7 @@ function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::
     started_tours = 0
 
     for t in 1:num_tours
+        println("Tour: ", t)
         flattour!(T, max_size, weights, samples, bin_function)
     end
 
