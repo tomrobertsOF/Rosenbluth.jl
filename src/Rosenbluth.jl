@@ -258,6 +258,8 @@ function shrink!(model::GARMSampleable)
     throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
 end
 
+abstract type GrowShrinkSampleable <: GARMSampleable end
+
 function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GrowShrinkSampleable}
     model = T()
     weight = zeros(Float64, max_size)
@@ -312,8 +314,6 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
         end
     end
 end
-
-abstract type GrowShrinkSampleable <: GARMSampleable end
 
 function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GrowShrinkSampleable}
     model = T()
