@@ -124,4 +124,12 @@ function Rosenbluth.shrink!(model::SiteTree)
     end
 end
 
+function Rosenbluth.max_aplus(::Type{SiteTree}, max_size::Int)
+    2 * (max_size + 1) + 4
+end
+function Rosenbluth.max_aminus(::Type{SiteTree}, max_size::Int)
+    (max_size + 2) ÷ 4 + (max_size + 1) ÷ 4 + 2
+end
+
+
 end
