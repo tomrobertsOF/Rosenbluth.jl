@@ -322,6 +322,7 @@ function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:G
 
     enrichment_stack = Vector{Bool}()
     push!(enrichment_stack, true)
+    enrichment_counter = 1;
 
     while (size(model) != 1 || !isempty(enrichment_stack))
         
@@ -333,6 +334,7 @@ function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:G
                 copies[n] -= 1
             end
             pop!(enrichment_stack)
+            enrichment_counter -= 1
             grow!(model)
             n = size(model)
 
@@ -356,6 +358,7 @@ function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:G
 
             for _ in 1:copies[n]
                 push!(enrichment_stack, true)
+                enrichment_counter += 1
             end
 
             weight[n] /= ratio
