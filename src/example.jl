@@ -11,4 +11,11 @@ using BenchmarkTools
 
 #s, w = Rosenbluth.growshrinkgarm(SiteTree, 10, 1000)
 
-w, s = Rosenbluth.sample(Models.SAW2D, 100, 10000, prune_enrich=true)
+#w, s = Rosenbluth.sample(Models.SAW2D, 100, 10000, prune_enrich=true)
+
+using Logging
+debuglogger = ConsoleLogger(stderr, Logging.Debug)
+Base.with_logger(debuglogger) do
+    w, s = Rosenbluth.sample(Models.SAW2D, 20, 100000)
+end
+

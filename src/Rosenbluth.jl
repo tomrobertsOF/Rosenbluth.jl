@@ -1,7 +1,7 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, GrowShrinkSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
+export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
 abstract type GARMSampleable end
 abstract type RosenbluthSampleable <: GARMSampleable end
 
@@ -16,7 +16,6 @@ function negative_atmosphere(model::RosenbluthSampleable)::Int
     return 1
 end
 
-
 function positive_atmosphere(model::GARMSampleable)::Int
     throw(ArgumentError("positive_atmosphere not implemented for $(typeof(model))"))
 end
@@ -27,166 +26,12 @@ end
 function grow!(model::GARMSampleable)
     throw(ArgumentError("grow! not implemented for $(typeof(model))"))
 end
-
 function size(model::GARMSampleable)
     throw(ArgumentError("size not implemented for $(typeof(model))"))
 end
 
-function sample(::Type{T}, max_size::Int, num_samples::Int; prune_enrich=false) where {T<:GARMSampleable}
-    if T <: RosenbluthSampleable
-        if prune_enrich
-            return perm(T, max_size, num_samples)
-        else
-            return rosenbluth(T, max_size, num_samples)
-        end
-    else
-        if prune_enrich
-            return pegarm(T, max_size, num_samples)
-        else
-            return garm(T, max_size, num_samples)
-        end
-    end
-end
-
-function rosenbluth(::Type{T}, max_size::Int, num_samples::Int) where {T<:RosenbluthSampleable}
-
-    weights = zeros(Float64, max_size)
-
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_samples
-        model = T()
-        weight = 1.0
-        n = size(model)
-        while n < max_size
-            weight *= atmosphere(model)
-            if weight == 0
-                break
-            end
-            grow!(model::T)
-            n = size(model)
-
-            weights[n] += weight
-            samples[n] += 1
-        end
-    end
-
-    return weights ./ num_samples, samples
-end
-
-function garm(::Type{T}, max_size::Int, num_samples::Int) where {T<:GARMSampleable}
-
-    weights = zeros(Float64, max_size)
-
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_samples
-        model = T()
-        weight = 1.0
-
-        n = size(model)
-        while n < max_size
-
-            weight *= positive_atmosphere(model)
-            if weight == 0
-                break
-            end
-            grow!(model::T)
-
-            weight /= negative_atmosphere(model)
-
-            n = size(model)
-
-            weights[n] += weight
-            samples[n] += 1
-
-        end
-    end
-
-    return weights ./ num_samples, samples
-end
-
-function perm(::Type{T}, max_size::Int, num_tours::Int) where {T<:RosenbluthSampleable}
-    weights = zeros(Float64, max_size)
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_tours
-        enrichment_stack = Vector{Tuple{T,Float64}}()
-        push!(enrichment_stack, (T(), 1.0))
-
-        while !isempty(enrichment_stack)
-            model, weight = pop!(enrichment_stack)
-
-            weight *= atmosphere(model)
-            if weight == 0
-                continue
-            end
-            grow!(model)
-
-            n = size(model)
-            weights[n] += weight
-            samples[n] += 1
-
-            if n >= max_size
-                continue
-            end
-
-            ratio = weight * samples[1] / weights[n]
-            p = ratio % 1
-            copies = floor(Int, ratio)
-            if rand() < p
-                copies += 1
-            end
-
-            for _ in 1:copies
-                push!(enrichment_stack, (deepcopy(model), weight / ratio))
-            end
-        end
-    end
-
-    return weights ./ num_tours, samples
-end
-
-function pegarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
-    weights = zeros(Float64, max_size)
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_tours
-        enrichment_stack = Vector{Tuple{T,Float64}}()
-        push!(enrichment_stack, (T(), 1.0))
-
-        while !isempty(enrichment_stack)
-            model, weight = pop!(enrichment_stack)
-
-            weight *= positive_atmosphere(model)
-            if weight == 0
-                continue
-            end
-            grow!(model)
-            weight /= negative_atmosphere(model)
-
-            n = size(model)
-            weights[n] += weight
-            samples[n] += 1
-
-            if n >= max_size
-                continue
-            end
-
-            ratio = weight * samples[1] / weights[n]
-            p = ratio % 1
-            copies = floor(Int, ratio)
-            if rand() < p
-                copies += 1
-            end
-
-            for _ in 1:copies
-                push!(enrichment_stack, (deepcopy(model), weight / ratio))
-            end
-        end
-    end
-
-    return weights ./ num_tours, samples
+function shrink!(model::GARMSampleable)
+    throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
 end
 
 function max_aplus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
@@ -198,6 +43,88 @@ end
 
 function bin_dimensions(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("bin_dimensions not implemented for $(typeof(T))"))
+end
+
+
+function sample(::Type{T}, max_size::Int, num_samples::Int; prune_enrich=false) where {T<:GARMSampleable}
+    if prune_enrich
+        return pegarm(T, max_size, num_samples)
+    else
+        return garm(T, max_size, num_samples)
+    end
+end
+
+function garm(::Type{T}, max_size::Int, num_samples::Int) where {T<:GARMSampleable}
+    @debug "garm called"
+    weights = zeros(Float64, max_size)
+    samples = zeros(Int, max_size)
+
+    for _ in 1:num_samples
+        model = T()
+        weight = 1.0
+
+        n = size(model)
+        while n < max_size
+            weight *= positive_atmosphere(model)
+            if weight == 0
+                break
+            end
+            grow!(model::T)
+
+            weight /= negative_atmosphere(model)
+
+            n = size(model)
+
+            weights[n] += weight
+            samples[n] += 1
+
+        end
+    end
+
+    return weights ./ num_samples, samples
+end
+
+function pegarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+    @debug "pegarm called"
+    weights = zeros(Float64, max_size)
+    samples = zeros(Int, max_size)
+
+    for _ in 1:num_tours
+        enrichment_stack = Vector{Tuple{T,Float64}}()
+        push!(enrichment_stack, (T(), 1.0))
+
+        while !isempty(enrichment_stack)
+            model, weight = pop!(enrichment_stack)
+
+            weight *= positive_atmosphere(model)
+            if weight == 0
+                continue
+            end
+            grow!(model)
+            weight /= negative_atmosphere(model)
+
+            n = size(model)
+            weights[n] += weight
+            samples[n] += 1
+
+            if n >= max_size
+                continue
+            end
+
+            ratio = weight * samples[1] / weights[n]
+            p = ratio % 1
+            copies = floor(Int, ratio)
+            if rand() < p
+                copies += 1
+            end
+
+            for _ in 1:copies
+                push!(enrichment_stack, (deepcopy(model), weight / ratio))
+            end
+        end
+    end
+
+    return weights ./ num_tours, samples
 end
 
 function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
@@ -254,13 +181,7 @@ function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {
     return flatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
 end
 
-function shrink!(model::GARMSampleable)
-    throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
-end
-
-abstract type GrowShrinkSampleable <: GARMSampleable end
-
-function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GrowShrinkSampleable}
+function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
     model = T()
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
@@ -269,7 +190,7 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
     push!(enrichment_stack, true)
 
     while (size(model) != 1 || !isempty(enrichment_stack))
-        
+
         n = size(model)
         prev_aplus = positive_atmosphere(model)
 
@@ -315,17 +236,17 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
     end
 end
 
-function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GrowShrinkSampleable}
+function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GARMSampleable}
     model = T()
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
 
     enrichment_stack = Vector{Bool}()
     push!(enrichment_stack, true)
-    enrichment_counter = 1;
+    enrichment_counter = 1
 
     while (size(model) != 1 || !isempty(enrichment_stack))
-        
+
         n = size(model)
         prev_aplus = positive_atmosphere(model)
 
@@ -372,7 +293,8 @@ function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:G
     end
 end
 
-function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GrowShrinkSampleable}
+function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+    @debug "growshrinkgarm called"
     weights = zeros(Float64, max_size)
     samples = zeros(Int, max_size)
 
@@ -383,7 +305,7 @@ function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:Grow
     return weights ./ num_tours, samples
 end
 
-function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GrowShrinkSampleable}
+function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
     weights = zeros(Float64, results_dimensions)
     samples = zeros(Int, results_dimensions)
 
@@ -395,11 +317,28 @@ function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_di
     return weights ./ num_tours, samples
 end
 
-function growshrinkatmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GrowShrinkSampleable}
+function growshrinkatmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
     results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
 
     return growshrinkflatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
 end
+
+function isspecialized(f::Function, T::Type)
+    return any([method.sig <: Tuple{Any,T,Vararg} for method in methods(f)])
+end
+
+function isshrinkable(T::Type)
+    return isspecialized(shrink!, T)
+end
+
+function garmsample(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+    if isshrinkable(T)
+        return growshrinkgarm(T, max_size, num_tours)
+    else
+        return pegarm(T, max_size, num_tours)
+    end
+end
+
 
 include("Models.jl")
 
