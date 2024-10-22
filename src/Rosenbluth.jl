@@ -86,45 +86,7 @@ end
 
 function pegarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
     @debug "pegarm called"
-    weights = zeros(Float64, max_size)
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_tours
-        enrichment_stack = Vector{Tuple{T,Float64}}()
-        push!(enrichment_stack, (T(), 1.0))
-
-        while !isempty(enrichment_stack)
-            model, weight = pop!(enrichment_stack)
-
-            weight *= positive_atmosphere(model)
-            if weight == 0
-                continue
-            end
-            grow!(model)
-            weight /= negative_atmosphere(model)
-
-            n = size(model)
-            weights[n] += weight
-            samples[n] += 1
-
-            if n >= max_size
-                continue
-            end
-
-            ratio = weight * samples[1] / weights[n]
-            p = ratio % 1
-            copies = floor(Int, ratio)
-            if rand() < p
-                copies += 1
-            end
-
-            for _ in 1:copies
-                push!(enrichment_stack, (deepcopy(model), weight / ratio))
-            end
-        end
-    end
-
-    return weights ./ num_tours, samples
+    return flatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),))
 end
 
 function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
@@ -163,12 +125,15 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bi
     end
 end
 
+
 function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
     weights = zeros(Float64, results_dimensions)
     samples = zeros(Int, results_dimensions)
 
     for t in 1:num_tours
-        println("Tour: ", t)
+        if t % (num_tours ÷ 20) == 0
+            println("Tour: ", t)
+        end
         flattour!(T, max_size, weights, samples, t, bin_function)
     end
 
@@ -178,7 +143,7 @@ end
 function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
     results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
 
-    return flatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
+    return flatgarm(T, max_size, num_tours, results_dimensions, @inline (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
 end
 
 function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
@@ -236,73 +201,9 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
     end
 end
 
-function growshrinktour!(::Type{T}, max_size::Int, weights, samples) where {T<:GARMSampleable}
-    model = T()
-    weight = zeros(Float64, max_size)
-    copies = zeros(Int, max_size)
-
-    enrichment_stack = Vector{Bool}()
-    push!(enrichment_stack, true)
-    enrichment_counter = 1
-
-    while (size(model) != 1 || !isempty(enrichment_stack))
-
-        n = size(model)
-        prev_aplus = positive_atmosphere(model)
-
-        if prev_aplus > 0
-            if n > 0
-                copies[n] -= 1
-            end
-            pop!(enrichment_stack)
-            enrichment_counter -= 1
-            grow!(model)
-            n = size(model)
-
-            weight[n] = (n > 1 ? weight[n-1] : 1)
-            weight[n] *= prev_aplus
-            weight[n] /= negative_atmosphere(model)
-
-            weights[n] += weight[n]
-            samples[n] += 1
-        end
-
-        if (n >= max_size || prev_aplus == 0)
-            copies[n] = 0
-        else
-            ratio = weight[n] * samples[1] / weights[n]
-            p = ratio % 1
-            copies[n] = floor(Int, ratio)
-            if rand() < p
-                copies[n] += 1
-            end
-
-            for _ in 1:copies[n]
-                push!(enrichment_stack, true)
-                enrichment_counter += 1
-            end
-
-            weight[n] /= ratio
-        end
-        if (copies[n] == 0)
-            while (n > 1 && copies[n] == 0)
-                shrink!(model)
-                n = size(model)
-            end
-        end
-    end
-end
-
 function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
     @debug "growshrinkgarm called"
-    weights = zeros(Float64, max_size)
-    samples = zeros(Int, max_size)
-
-    for _ in 1:num_tours
-        growshrinktour!(T, max_size, weights, samples)
-    end
-
-    return weights ./ num_tours, samples
+    return growshrinkflatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),))
 end
 
 function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
@@ -310,7 +211,9 @@ function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_di
     samples = zeros(Int, results_dimensions)
 
     for t in 1:num_tours
-        println("Tour: ", t)
+        if t % (num_tours ÷ 20) == 0
+            println("Tour: ", t)
+        end
         flatgrowshrinktour!(T, max_size, weights, samples, t, bin_function)
     end
 
