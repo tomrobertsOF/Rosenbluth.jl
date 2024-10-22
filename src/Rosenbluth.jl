@@ -146,7 +146,62 @@ function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {
     return flatgarm(T, max_size, num_tours, results_dimensions, @inline (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
 end
 
-function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
+function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, normalize_function::Function, bin_function::Function) where {T<:GARMSampleable}
+    model = T()
+    weight = zeros(Float64, max_size)
+    copies = zeros(Int, max_size)
+
+    enrichment_stack = Vector{Bool}()
+    push!(enrichment_stack, true)
+
+    while (size(model) != 1 || !isempty(enrichment_stack))
+
+        n = size(model)
+        prev_aplus = positive_atmosphere(model)
+
+        if prev_aplus > 0
+            if n > 0
+                copies[n] -= 1
+            end
+            pop!(enrichment_stack)
+            grow!(model)
+            n = size(model)
+            bin_index = bin_function(model)
+
+            weight[n] = (n > 1 ? weight[n-1] : 1)
+            weight[n] *= prev_aplus
+            weight[n] /= negative_atmosphere(model)
+
+            weights[bin_index...] += weight[n]
+            samples[bin_index...] += 1
+        end
+
+        if (n >= max_size || prev_aplus == 0)
+            copies[n] = 0
+        else
+            ratio = weight[n] * normalize_function(n) / weights[bin_index...]
+            p = ratio % 1
+            copies[n] = floor(Int, ratio)
+            if rand() < p
+                copies[n] += 1
+            end
+
+            for _ in 1:copies[n]
+                push!(enrichment_stack, true)
+            end
+
+            weight[n] /= ratio
+        end
+        if (copies[n] == 0)
+            while (n > 1 && copies[n] == 0)
+                shrink!(model)
+                n = size(model)
+            end
+        end
+    end
+end
+
+function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started_tours::Int, bin_function::Function) where {T<:GARMSampleable}
     model = T()
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
