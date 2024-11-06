@@ -311,4 +311,77 @@ end
 
 include("Models.jl")
 
+function mostgenerictour!(::Type{T}, max_size::Int, started_tours::Int,
+    results::Tuple{AbstractArray,AbstractArray},
+    pruning_enrichment_targets::Tuple{AbstractArray,AbstractArray},
+    update_results!::Function,
+    update_targets!::Function,
+    get_target_weight::Function,
+) where {T}
+
+    # function flatgrowshrinktour!(::Type{T}, max_size::Int, 
+    #     weights, samples, 
+    #     started_tours::Int, 
+    #     bin_function::Function) where {T<:GARMSampleable}
+
+    model = T()
+    weight = zeros(Float64, max_size)
+    copies = zeros(Int, max_size)
+
+    enrichment_stack = Vector{Bool}()
+    push!(enrichment_stack, true)
+
+    while (size(model) != 1 || !isempty(enrichment_stack))
+
+        n = size(model)
+        prev_aplus = positive_atmosphere(model)
+
+        if prev_aplus > 0
+            if n > 0
+                copies[n] -= 1
+            end
+            pop!(enrichment_stack)
+            grow!(model)
+            n = size(model)
+
+            weight[n] = (n > 1 ? weight[n-1] : 1)
+            weight[n] *= prev_aplus
+            weight[n] /= negative_atmosphere(model)
+
+            update_results!(model, results, weight[n])
+            update_targets!(model, pruning_enrichment_targets, weight[n])
+        end
+
+        if (n >= max_size || prev_aplus == 0)
+            copies[n] = 0
+        else
+            ratio = weight[n] / get_target_weight(model, pruning_enrichment_targets, started_tours)
+            p = ratio % 1
+            copies[n] = floor(Int, ratio)
+            if rand() < p
+                copies[n] += 1
+            end
+
+            for _ in 1:copies[n]
+                push!(enrichment_stack, true)
+            end
+
+            weight[n] /= ratio
+        end
+        if (copies[n] == 0)
+            while (n > 1 && copies[n] == 0)
+                shrink!(model)
+                n = size(model)
+            end
+        end
+    end
 end
+
+
+end
+# Ideas:
+# - disentangle results data from pruning/enrichment target data
+#   - this could be done with a function that takes some required input and returns the target weight
+#   - the problem may be determining what the required input should be to cover all cases
+#   - the cases we may need to cover so far are:
+#     - atmospheric flattening
