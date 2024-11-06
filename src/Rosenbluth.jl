@@ -1,7 +1,7 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm
+export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm, garmsample, PruneEnrichMethod
 abstract type GARMSampleable end
 abstract type RosenbluthSampleable <: GARMSampleable end
 
@@ -54,12 +54,16 @@ function sample(::Type{T}, max_size::Int, num_samples::Int; prune_enrich=false) 
     end
 end
 
-function garm(::Type{T}, max_size::Int, num_samples::Int) where {T<:GARMSampleable}
+function garm(::Type{T}, max_size::Int, num_samples::Int; logging=true) where {T<:GARMSampleable}
     @debug "garm called"
     weights = zeros(Float64, max_size)
     samples = zeros(Int, max_size)
 
-    for _ in 1:num_samples
+    for t in 1:num_samples
+        if logging && t % (num_samples ÷ 20) == 0
+            println("Tour: ", t)
+        end
+
         model = T()
         weight = 1.0
 
@@ -275,10 +279,10 @@ function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_di
     return weights ./ num_tours, samples
 end
 
-function growshrinkatmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+function growshrinkatmosphericflattening(::Type{T}, max_size::Int, num_tours::Int; logging=true) where {T<:GARMSampleable}
     results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
 
-    return growshrinkflatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
+    return growshrinkflatgarm(T, max_size, num_tours, results_dimensions, (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)); logging=logging)
 end
 
 function isspecialized(f::Function, T::Type)
@@ -289,14 +293,21 @@ function isshrinkable(T::Type)
     return isspecialized(shrink!, T)
 end
 
-function garmsample(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
-    if isshrinkable(T)
-        return growshrinkgarm(T, max_size, num_tours)
-    else
-        return pegarm(T, max_size, num_tours)
+const PruneEnrichMethod = (NONE=:none, STANDARD=:standard, ATMOSPHERIC_FLATTENING=:atm_flat)
+
+function get_sampler(T::Type, prune_enrich::Symbol)
+    if prune_enrich == PruneEnrichMethod.NONE
+        return garm
+    elseif prune_enrich == PruneEnrichMethod.STANDARD
+        return isshrinkable(T) ? growshrinkgarm : pegarm
+    elseif prune_enrich == PruneEnrichMethod.ATMOSPHERIC_FLATTENING
+        return isshrinkable(T) ? growshrinkatmosphericflattening : atmosphericflattening
     end
 end
 
+function garmsample(::Type{T}, max_size::Int, num_tours::Int; prune_enrich_method=:none, logging=true) where {T<:GARMSampleable}
+    return get_sampler(T, prune_enrich_method)(T, max_size, num_tours; logging=logging)
+end
 
 include("Models.jl")
 
