@@ -84,9 +84,9 @@ function garm(::Type{T}, max_size::Int, num_samples::Int) where {T<:GARMSampleab
     return weights ./ num_samples, samples
 end
 
-function pegarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+function pegarm(::Type{T}, max_size::Int, num_tours::Int; logging=true) where {T<:GARMSampleable}
     @debug "pegarm called"
-    return flatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),))
+    return flatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),); logging=logging)
 end
 
 function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bin_function::Function) where {T<:GARMSampleable}
@@ -126,12 +126,12 @@ function flattour!(::Type{T}, max_size::Int, weights, samples, started_tours, bi
 end
 
 
-function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
+function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function; logging=true) where {T<:GARMSampleable}
     weights = zeros(Float64, results_dimensions)
     samples = zeros(Int, results_dimensions)
 
     for t in 1:num_tours
-        if t % (num_tours ÷ 20) == 0
+        if logging && t % (num_tours ÷ 20) == 0
             println("Tour: ", t)
         end
         flattour!(T, max_size, weights, samples, t, bin_function)
@@ -256,17 +256,17 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
     end
 end
 
-function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+function growshrinkgarm(::Type{T}, max_size::Int, num_tours::Int; logging=true) where {T<:GARMSampleable}
     @debug "growshrinkgarm called"
-    return growshrinkflatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),))
+    return growshrinkflatgarm(T, max_size, num_tours, (max_size,), @inline (model::T) -> (size(model),); logging=logging)
 end
 
-function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function) where {T<:GARMSampleable}
+function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::Tuple, bin_function::Function; logging=true) where {T<:GARMSampleable}
     weights = zeros(Float64, results_dimensions)
     samples = zeros(Int, results_dimensions)
 
     for t in 1:num_tours
-        if t % (num_tours ÷ 20) == 0
+        if logging && t % (num_tours ÷ 20) == 0
             println("Tour: ", t)
         end
         flatgrowshrinktour!(T, max_size, weights, samples, t, bin_function)
