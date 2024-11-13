@@ -2,45 +2,48 @@ using Revise
 using Rosenbluth
 using Rosenbluth.Models
 
-target_size = 10;
-num_tours = 1000;
+results = Rosenbluth.garmsample(Models.SiteTree, 100, 50000; prune_enrich_method=Rosenbluth.PruneEnrichMethod.ATMOSPHERIC_FLATTENING)
+vec.(sum.(results, dims=(2,3)))[1]
 
-modeltype = Models.SiteTree
+# target_size = 10;
+# num_tours = 1000;
 
-weights = zeros(Float64, target_size, Rosenbluth.max_aplus(modeltype, target_size), Rosenbluth.max_aminus(modeltype, target_size));
-samples = zeros(Int, target_size, Rosenbluth.max_aplus(modeltype, target_size), Rosenbluth.max_aminus(modeltype, target_size));
+# modeltype = Models.SiteTree
 
-results = (weights, samples)
+# weights = zeros(Float64, target_size, Rosenbluth.max_aplus(modeltype, target_size), Rosenbluth.max_aminus(modeltype, target_size));
+# samples = zeros(Int, target_size, Rosenbluth.max_aplus(modeltype, target_size), Rosenbluth.max_aminus(modeltype, target_size));
 
-target_weights = zeros(Float64, target_size)
-target_samples = zeros(Int, target_size)
+# results = (weights, samples)
 
-targets = (target_weights, target_samples)
+# target_weights = zeros(Float64, target_size)
+# target_samples = zeros(Int, target_size)
 
-update_results! = (model, results, weight) -> begin
-bin_index = [Rosenbluth.size(model), Rosenbluth.positive_atmosphere(model), Rosenbluth.negative_atmosphere(model)]
-results[1][bin_index...] += weight
-results[2][bin_index...] += 1
-end;
+# targets = (target_weights, target_samples)
 
-update_targets! = (model, targets, weight) -> begin
-        n = Rosenbluth.size(model)
-        targets[1][n] += weight
-        targets[2][n] += 1
-end;
+# update_results! = (model, results, weight) -> begin
+# bin_index = [Rosenbluth.size(model), Rosenbluth.positive_atmosphere(model), Rosenbluth.negative_atmosphere(model)]
+# results[1][bin_index...] += weight
+# results[2][bin_index...] += 1
+# end;
 
-get_target_weight = (model, targets, started_tours) -> begin
-    n = Rosenbluth.size(model)
-    return targets[1][n] / started_tours
-end;
+# update_targets! = (model, targets, weight) -> begin
+#         n = Rosenbluth.size(model)
+#         targets[1][n] += weight
+#         targets[2][n] += 1
+# end;
 
-for t in 1:num_tours
-Rosenbluth.mostgenerictour!(modeltype, target_size, t, results, targets,
-    update_results!,
-    update_targets!,
-    get_target_weight,
-)
-end
+# get_target_weight = (model, targets, started_tours) -> begin
+#     n = Rosenbluth.size(model)
+#     return targets[1][n] / started_tours
+# end;
 
-display(vec.(sum.(results, dims=(2,3))) ./ num_tours)
-display(targets ./ num_tours)
+# for t in 1:num_tours
+# Rosenbluth.mostgenerictour!(modeltype, target_size, t, results, targets,
+#     update_results!,
+#     update_targets!,
+#     get_target_weight,
+# )
+# end
+
+w, s = (vec.(sum.(results, dims=(2,3))))
+# display(targets ./ num_tours)
