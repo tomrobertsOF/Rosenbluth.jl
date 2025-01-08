@@ -17,7 +17,7 @@ To install Rosenbluth.jl, you can use the Julia package manager. Open the Julia 
 
 ```julia
 using Pkg
-Pkg.add("Rosenbluth")
+Pkg.add("https://github.com/tomrobertsOF/Rosenbluth.jl")
 ```
 
 ## Usage
