@@ -20,3 +20,10 @@ function Rosenbluth.grow!(model::BinaryTree)
     model.n += 1
     return
 end
+
+function Rosenbluth.max_aplus(::Type{BinaryTree}, max_size::Int)
+    max_size + 1
+end
+function Rosenbluth.max_aminus(::Type{BinaryTree}, max_size::Int)
+    ceil(Int, max_size / 2)
+end
