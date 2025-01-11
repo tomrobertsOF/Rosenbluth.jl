@@ -1,58 +1,26 @@
 module Rosenbluth
 
 # Write your package code here.
-export RosenbluthSampleable, GARMSampleable, rosenbluth, garm, perm, pegarm, sample, growshrinkgarm, flatgarm, garmsample, PruneEnrichMethod
-abstract type GARMSampleable end
-abstract type RosenbluthSampleable <: GARMSampleable end
+export RosenbluthSampleable, GARMSampleable, sample, PruneEnrichMethod
 
-function atmosphere(model::RosenbluthSampleable)::Int
-    throw(ArgumentError("atmosphere not implemented for $(typeof(model))"))
-end
-
-function positive_atmosphere(model::RosenbluthSampleable)::Int
-    return atmosphere(model)
-end
-function negative_atmosphere(model::RosenbluthSampleable)::Int
-    return 1
-end
-
-function positive_atmosphere(model::GARMSampleable)::Int
-    throw(ArgumentError("positive_atmosphere not implemented for $(typeof(model))"))
-end
-function negative_atmosphere(model::GARMSampleable)::Int
-    throw(ArgumentError("negative_atmosphere not implemented for $(typeof(model))"))
-end
-
-function grow!(model::GARMSampleable)
-    throw(ArgumentError("grow! not implemented for $(typeof(model))"))
-end
-function size(model::GARMSampleable)
-    throw(ArgumentError("size not implemented for $(typeof(model))"))
-end
-
-function shrink!(model::GARMSampleable)
-    throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
-end
-
-function max_aplus(::Type{T}) where {T<:GARMSampleable}
-    return n -> max_aplus(T, n)
-end
-function max_aplus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
-    throw(ArgumentError("max_aplus not implemented for $(typeof(T))"))
-end
-
-function max_aminus(::Type{T}) where {T<:GARMSampleable}
-    return n -> max_aminus(T, n)
-end
-function max_aminus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
-    throw(ArgumentError("max_aminus not implemented for $(typeof(T))"))
-end
-
-function bin_dimensions(::Type{T}, max_size::Int) where {T<:GARMSampleable}
-    throw(ArgumentError("bin_dimensions not implemented for $(typeof(T))"))
-end
+include("Sampleable.jl")
 
 
+"""
+    sample(::Type{T}, max_size::Int, num_tours::Int; prune_enrich_method=:none, logging=true) where {T<:GARMSampleable}
+
+Sample a model of type `T` using the GARM algorithm with optional pruning and enrichment methods.
+
+# Arguments
+- `T`: The type of the model to be sampled.
+- `max_size`: The maximum size of the model.
+- `num_tours`: The number of tours to perform.
+- `prune_enrich_method`: The pruning and enrichment method to use (`:none`, `:standard`, or `:atm_flat`).
+- `logging`: A boolean indicating whether to log progress.
+
+# Returns
+A tuple containing the weights and samples.
+"""
 function sample(::Type{T}, max_size::Int, num_samples::Int; prune_enrich=false) where {T<:GARMSampleable}
     if prune_enrich
         return pegarm(T, max_size, num_samples)
