@@ -144,10 +144,10 @@ function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::
     return weights ./ num_tours, samples
 end
 
-function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int) where {T<:GARMSampleable}
+function atmosphericflattening(::Type{T}, max_size::Int, num_tours::Int; logging=true) where {T<:GARMSampleable}
     results_dimensions = (max_size, max_aplus(T, max_size), max_aminus(T, max_size))
 
-    return flatgarm(T, max_size, num_tours, results_dimensions, @inline (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)))
+    return flatgarm(T, max_size, num_tours, results_dimensions, @inline (model::T) -> (size(model), positive_atmosphere(model), negative_atmosphere(model)); logging=logging)
 end
 
 function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, normalize_function::Function, bin_function::Function) where {T<:GARMSampleable}
@@ -255,7 +255,6 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, started
             while (n > 1 && copies[n] == 0)
                 shrink!(model)
                 n = size(model)
-                pop!(enrichment_stack)
             end
         end
     end
@@ -291,7 +290,7 @@ function growshrinkstacktour!(::Type{T}, max_size::Int, weights, samples, starte
         if n >= max_size || prev_aplus == 0
             continue
         else
-            ratio = current_weight * started_tours / (weights[bin_index...] * n * n)
+            ratio = current_weight * started_tours / weights[bin_index...]
             copies = floor(Int, ratio) + Int(rand() < (ratio % 1))
 
             append!(enrichment_stack, [(n, current_weight / ratio) for _ in 1:copies])
@@ -312,7 +311,7 @@ function growshrinkflatgarm(::Type{T}, max_size::Int, num_tours::Int, results_di
         if logging && t % (num_tours ÷ 20) == 0
             println("Tour: ", t)
         end
-        growshrinkstacktour!(T, max_size, weights, samples, t, bin_function)
+        flatgrowshrinktour!(T, max_size, weights, samples, t, bin_function)
     end
 
     return weights ./ num_tours, samples
