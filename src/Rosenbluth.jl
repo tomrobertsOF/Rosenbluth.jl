@@ -34,8 +34,15 @@ function shrink!(model::GARMSampleable)
     throw(ArgumentError("shrink! not implemented for $(typeof(model))"))
 end
 
+function max_aplus(::Type{T}) where {T<:GARMSampleable}
+    return n -> max_aplus(T, n)
+end
 function max_aplus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("max_aplus not implemented for $(typeof(T))"))
+end
+
+function max_aminus(::Type{T}) where {T<:GARMSampleable}
+    return n -> max_aminus(T, n)
 end
 function max_aminus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("max_aminus not implemented for $(typeof(T))"))
