@@ -21,12 +21,8 @@ Sample a model of type `T` using the GARM algorithm with optional pruning and en
 # Returns
 A tuple containing the weights and samples.
 """
-function sample(::Type{T}, max_size::Int, num_samples::Int; prune_enrich=false) where {T<:GARMSampleable}
-    if prune_enrich
-        return pegarm(T, max_size, num_samples)
-    else
-        return garm(T, max_size, num_samples)
-    end
+function sample(::Type{T}, max_size::Int, num_tours::Int; prune_enrich_method=:none, logging=true) where {T<:GARMSampleable}
+    return get_sampler(T, prune_enrich_method)(T, max_size, num_tours; logging=logging)
 end
 
 function garm(::Type{T}, max_size::Int, num_samples::Int; logging=true) where {T<:GARMSampleable}
@@ -306,6 +302,14 @@ function isshrinkable(T::Type)
     return isspecialized(shrink!, T)
 end
 
+"""
+    PruneEnrichMethod
+
+A constant defining the available pruning and enrichment methods:
+- `NONE`: No pruning or enrichment.
+- `STANDARD`: Standard pruning and enrichment.
+- `ATMOSPHERIC_FLATTENING`: Atmospheric flattening.
+"""
 const PruneEnrichMethod = (NONE=:none, STANDARD=:standard, ATMOSPHERIC_FLATTENING=:atm_flat)
 
 function get_sampler(T::Type, prune_enrich::Symbol)
@@ -316,10 +320,6 @@ function get_sampler(T::Type, prune_enrich::Symbol)
     elseif prune_enrich == PruneEnrichMethod.ATMOSPHERIC_FLATTENING
         return isshrinkable(T) ? growshrinkatmosphericflattening : atmosphericflattening
     end
-end
-
-function garmsample(::Type{T}, max_size::Int, num_tours::Int; prune_enrich_method=:none, logging=true) where {T<:GARMSampleable}
-    return get_sampler(T, prune_enrich_method)(T, max_size, num_tours; logging=logging)
 end
 
 include("Models.jl")
