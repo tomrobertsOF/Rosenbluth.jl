@@ -1,6 +1,7 @@
 # This file contains the default interface for the GARMSampleable and RosenbluthSampleable types.
 # The user can implment these methods for their own models to use the GARMSampleable interface.
 
+include("type_helpers.jl")
 
 """
     GARMSampleable
@@ -85,4 +86,29 @@ function max_aminus(::Type{T}) where {T<:GARMSampleable}
 end
 function max_aminus(::Type{T}, max_size::Int) where {T<:GARMSampleable}
     throw(ArgumentError("max_aminus not implemented for $(typeof(T))"))
+end
+
+"""
+Model types must either be 
+
+GARMSampleable with
+- `positive_atmosphere(model::GARMSampleable)::Int`
+- `negative_atmosphere(model::GARMSampleable)::Int`
+- `grow!(model::GARMSampleable)`
+- `size(model::GARMSampleable)`
+
+or RosenbluthSampleable with
+- `atmosphere(model::RosenbluthSampleable)::Int`
+- `grow!(model::GARMSampleable)`
+- `size(model::GARMSampleable)`
+
+"""
+function isSampleable(model::Type)
+    return isspecialized(grow!, model) && isspecialized(size, model) &&
+           (isspecialized(atmosphere, model) ||
+            (
+               isspecialized(positive_atmosphere, model)
+               &&
+               isspecialized(negative_atmosphere, model)
+           ))
 end

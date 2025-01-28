@@ -3,7 +3,6 @@ module Rosenbluth
 export RosenbluthSampleable, GARMSampleable, sample, PruneEnrichMethod
 
 include("Sampleable.jl")
-include("type_helpers.jl")
 
 # Constants
 """
@@ -33,6 +32,8 @@ Sample a model of type `T` using the GARM algorithm with optional pruning and en
 A tuple containing the weights and samples.
 """
 function sample(::Type{T}, max_size::Int, num_tours::Int; prune_enrich_method=:none, logging=true) where {T<:GARMSampleable}
+    isSampleable(T) || throw(ArgumentError("Type $(T) is not sampleable. It must implement the GARMSampleable or RosenbluthSampleable interface."))
+
     return get_sampler(T, prune_enrich_method)(T, max_size, num_tours; logging=logging)
 end
 
@@ -53,7 +54,7 @@ function garm(::Type{T}, max_size::Int, num_samples::Int; logging=true) where {T
     samples = zeros(Int, max_size)
 
     for t in 1:num_samples
-        if logging && t % (num_samples ÷ 20) == 0
+        if logging && num_samples > 20 && t % (num_samples ÷ 20) == 0
             println("Tour: ", t)
         end
 
@@ -91,7 +92,7 @@ function flatgarm(::Type{T}, max_size::Int, num_tours::Int, results_dimensions::
     samples = zeros(Int, results_dimensions)
 
     for t in 1:num_tours
-        if logging && t % (num_tours ÷ 20) == 0
+        if logging && num_tours > 20 && t % (num_tours ÷ 20) == 0
             println("Tour: ", t)
         end
         flattour!(T, max_size, weights, samples, t, bin_function)
@@ -173,19 +174,19 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, normali
     weight = zeros(Float64, max_size)
     copies = zeros(Int, max_size)
 
-    enrichment_stack = Vector{Bool}()
-    push!(enrichment_stack, true)
+    outstanding_copies = 1;
 
-    while (size(model) != 1 || !isempty(enrichment_stack))
+    while (size(model) != 1 || outstanding_copies > 0 )
 
         n = size(model)
         prev_aplus = positive_atmosphere(model)
 
         if prev_aplus > 0
+            outstanding_copies -= 1
             if n > 0
                 copies[n] -= 1
             end
-            pop!(enrichment_stack)
+            
             grow!(model)
             n = size(model)
             bin_index = bin_function(model)
@@ -208,9 +209,7 @@ function flatgrowshrinktour!(::Type{T}, max_size::Int, weights, samples, normali
                 copies[n] += 1
             end
 
-            for _ in 1:copies[n]
-                push!(enrichment_stack, true)
-            end
+            outstanding_copies += copies[n]
 
             weight[n] /= ratio
         end
