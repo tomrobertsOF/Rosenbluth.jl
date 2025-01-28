@@ -146,7 +146,7 @@ end
     end
 end
 
-@testitem "Correct Sampler Chosen: flattening - grow only" setup = [RRModel, RRModelSampleable] begin
+@testitem "Atmospheric Flattening throws when atm limits not defined" setup = [RRModel, RRModelSampleable] begin
     let garm_calls = 0, pegarm_calls = 0, growshrinkgarm_calls = 0
         function Rosenbluth.garm(::Type{RRModel}, max_size::Int, num_samples::Int; logging=true)
             garm_calls += 1
@@ -161,39 +161,7 @@ end
             return true
         end
 
-        sample(RRModel, 10, 10, prune_enrich_method=:atm_flat)
-
-        @test garm_calls == 0
-        @test pegarm_calls == 1
-        @test growshrinkgarm_calls == 0
-    end
-end
-
-
-@testitem "when shrink is defined, the sampler calls growshrinkgarm with standard p/e" setup = [RRModel, RRModelSampleable] begin
-    function Rosenbluth.shrink!(::RRModel)
-    end
-
-    # stub out the actual samplers to check which one is called
-    let garm_calls = 0, pegarm_calls = 0, growshrinkgarm_calls = 0
-        function Rosenbluth.garm(::Type{RRModel}, max_size::Int, num_samples::Int; logging=true)
-            garm_calls += 1
-            return true
-        end
-        function Rosenbluth.pegarm(::Type{RRModel}, max_size::Int, num_samples::Int; logging=true)
-            pegarm_calls += 1
-            return true
-        end
-        function Rosenbluth.growshrinkgarm(::Type{RRModel}, max_size::Int, num_samples::Int; logging=true)
-            growshrinkgarm_calls += 1
-            return true
-        end
-
-        sample(RRModel, 10, 10, prune_enrich_method=:atm_flat)
-
-        @test garm_calls == 0
-        @test pegarm_calls == 0
-        @test growshrinkgarm_calls == 1
+        @test_throws ArgumentError sample(RRModel, 10, 10, prune_enrich_method=:atm_flat)
     end
 end
 
