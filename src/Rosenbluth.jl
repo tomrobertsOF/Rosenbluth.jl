@@ -164,7 +164,7 @@ function breadthfirstPEGARM(::Type{T}, max_size::Int, num_samples::Int; logging:
         particles = new_particles
     end
 
-    return weights ./ num_samples, samples
+    return weights ./ num_samples, samples, particles
 end
 
 function pegarm(::Type{T}, max_size::Int, num_tours::Int; logging=true) where {T<:GARMSampleable}
