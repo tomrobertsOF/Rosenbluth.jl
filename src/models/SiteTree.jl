@@ -75,23 +75,22 @@ end
 function Rosenbluth.shrink!(model::SiteTree)
     removed_site = pop!(model.history)
 
-    occupied, growth_candidates, shrink_candidates = model
-    delete!(occupied, removed_site)
+    delete!(model.occupied, removed_site)
     # Remove from a_minus
-    delete!(shrink_candidates, removed_site)
+    delete!(model.shrink_candidates, removed_site)
     # Add removed site to a_plus
-    push!(growth_candidates, removed_site)
+    push!(model.growth_candidates, removed_site)
     
     for neighbor in neighbors(removed_site)
-        if neighbor in growth_candidates
-            delete!(growth_candidates, neighbor)
+        if neighbor in model.growth_candidates
+            delete!(model.growth_candidates, neighbor)
         end
 
-        if length(getoccupiedneighbors(neighbor, occupied)) == 1
-            if neighbor in occupied
-                push!(shrink_candidates, neighbor)
+        if length(getoccupiedneighbors(neighbor, model.occupied)) == 1
+            if neighbor in model.occupied
+                push!(model.shrink_candidates, neighbor)
             else
-                push!(growth_candidates, neighbor)
+                push!(model.growth_candidates, neighbor)
             end
         end
     end
