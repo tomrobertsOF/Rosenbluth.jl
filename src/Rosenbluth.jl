@@ -146,7 +146,7 @@ function breadthfirstPEGARM(::Type{T}, max_size::Int, num_samples::Int; logging:
         Threads.@threads for i in 1:length(particles)
 
             # Thread-safe update array returning the previous value
-            old_copy = @lock locks[indices[i]] begin
+            old_copy = Threads.@lock locks[indices[i]] begin
                 prev, should_copy[indices[i]] = should_copy[indices[i]], true
                 prev
             end
