@@ -45,30 +45,29 @@ function Rosenbluth.grow!(model::SiteTree)
 
     push!(model.history, new_site)
 
-    occupied, growth_candidates, shrink_candidates = model
-    push!(occupied, new_site)
+    push!(model.occupied, new_site)
     # Remove from a_plus
-    delete!(growth_candidates, new_site)
+    delete!(model.growth_candidates, new_site)
     # Remove newly invalid sites from a_plus. I.e. unoccupied neighbors of new_node
     new_neighbors = neighbors(new_site)
     for neighbor in new_neighbors
-        delete!(growth_candidates, neighbor)
+        delete!(model.growth_candidates, neighbor)
     end
     # Remove neighbor from a_minus. There will only be one by construction, except for the first step where there will be none
-    occupied_neighbors = intersect(occupied, new_neighbors)
+    occupied_neighbors = intersect(model.occupied, new_neighbors)
     if !isempty(occupied_neighbors)
         neighbor = first(occupied_neighbors)
-        if neighbor in shrink_candidates && (neighbor != (0, 0) || length(getoccupiedneighbors(neighbor, occupied)) > 1)
-            delete!(shrink_candidates, neighbor)
+        if neighbor in model.shrink_candidates && (neighbor != (0, 0) || length(getoccupiedneighbors(neighbor, model.occupied)) > 1)
+            delete!(model.shrink_candidates, neighbor)
         end
     end
     # Add new site to a_minus
-    push!(shrink_candidates, new_site)
+    push!(model.shrink_candidates, new_site)
     # Add new valid neighbors to a_plus
     for neighbor in new_neighbors
         # Valid growth sites are unoccupied and have exactly one occupied neighbor
-        if !in(neighbor, occupied) && length(getoccupiedneighbors(neighbor, occupied)) == 1
-            push!(growth_candidates, neighbor)
+        if !in(neighbor, model.occupied) && length(getoccupiedneighbors(neighbor, model.occupied)) == 1
+            push!(model.growth_candidates, neighbor)
         end
     end
 end
@@ -76,23 +75,22 @@ end
 function Rosenbluth.shrink!(model::SiteTree)
     removed_site = pop!(model.history)
 
-    occupied, growth_candidates, shrink_candidates = model
-    delete!(occupied, removed_site)
+    delete!(model.occupied, removed_site)
     # Remove from a_minus
-    delete!(shrink_candidates, removed_site)
+    delete!(model.shrink_candidates, removed_site)
     # Add removed site to a_plus
-    push!(growth_candidates, removed_site)
+    push!(model.growth_candidates, removed_site)
     
     for neighbor in neighbors(removed_site)
-        if neighbor in growth_candidates
-            delete!(growth_candidates, neighbor)
+        if neighbor in model.growth_candidates
+            delete!(model.growth_candidates, neighbor)
         end
 
-        if length(getoccupiedneighbors(neighbor, occupied)) == 1
-            if neighbor in occupied
-                push!(shrink_candidates, neighbor)
+        if length(getoccupiedneighbors(neighbor, model.occupied)) == 1
+            if neighbor in model.occupied
+                push!(model.shrink_candidates, neighbor)
             else
-                push!(growth_candidates, neighbor)
+                push!(model.growth_candidates, neighbor)
             end
         end
     end

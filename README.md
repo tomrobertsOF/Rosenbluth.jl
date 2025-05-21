@@ -8,8 +8,7 @@ Rosenbluth.jl is a Julia library designed to provide a comprehensive suite of sa
 
 - Implementation of the original Rosenbluth and Rosenbluth (RR) algorithm for chain molecule simulations.
 - Advanced sampling techniques including the pruned-enriched Rosenbluth method (PERM) and the generalized atmospheric Rosenbluth method (GARM)
-- Support for both serial and parallel execution to leverage multi-core processors and distributed computing environments.
-- Minimal design allowing for easy use on any model
+- Minimal, extensible design allowing for easy use on any model
 
 ## Installation
 
@@ -21,20 +20,29 @@ Pkg.add("https://github.com/tomrobertsOF/Rosenbluth.jl")
 ```
 
 ## Usage
-To begin, define your model as deriving from `RosenbluthSampleable` and implement methods for `atmosphere`, `size` and `grow!`.
+The easiest way to get started is using the pre-defined models in the `Models` submodule, for example:
+```julia
+using Rosenbluth, Rosenbluth.Models
+
+# Runs 1000 tours of site trees up to size 50 with normal pruning/enrichment
+sample(Models.SiteTree, 50, 1000; prune_enrich_method=PruneEnrichMethod.STANDARD )
+
+```
+
+To use your own model, define it as a type deriving from `RosenbluthSampleable` and implement methods for `atmosphere`, `size` and `grow!`.
 
 ```julia
 using Rosenbluth
 struct Model <: RosenbluthSampleable
     ...
 end
-function atmosphere(model::Model)::Int
+function Rosenbluth.atmosphere(model::Model)::Int
     ...
 end
-function size(model::Model)::Int
+function Rosenbluth.size(model::Model)::Int
     ...
 end
-function grow!(model::Model)
+function Rosenbluth.grow!(model::Model)
     ...
 end
 ```
@@ -44,7 +52,6 @@ You can then call one of the sampling functions, for example:
 sample(Model, max_size, num_runs)
 ```
 
-For more detailed examples and usage instructions, please refer to the documentation.
 
 ## Contributing
 Contributions to Rosenbluth.jl are very welcome! If you have a suggestion for an improvement or have found a bug, please open an issue on our GitHub repository. If you'd like to contribute code, please submit a pull request.
@@ -58,9 +65,9 @@ Rosenbluth.jl is licensed under the MIT License. See the LICENSE file for more d
 - [x] Implement the basic Rosenbluth and Rosenbluth (RR) sampling algorithm.
 - [x] Add support for the pruned-enriched Rosenbluth method (PERM).
 - [ ] Create a suite of examples demonstrating the use of each algorithm.
-- [ ] Set up a testing framework and add initial unit tests.
+- [x] Set up a testing framework and add initial unit tests.
 - [ ] Optimize the performance of the algorithms for large-scale simulations.
 - [x] Allow smart optimizations by flags or properties of the model
 - [ ] Document the API and provide a getting started guide for new users.
-- [ ] Set up continuous integration (CI) to automate testing and ensure code quality.
+- [x] Set up continuous integration (CI) to automate testing and ensure code quality.
 
