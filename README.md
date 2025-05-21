@@ -20,7 +20,7 @@ Pkg.add("https://github.com/tomrobertsOF/Rosenbluth.jl")
 ```
 
 ## Usage
-The easiest way to get started is using the pre-defined models in the `Models` sub-module, for example:
+The easiest way to get started is using the pre-defined models in the `Models` submodule, for example:
 ```julia
 using Rosenbluth, Rosenbluth.Models
 
@@ -29,7 +29,7 @@ sample(Models.SiteTree, 50, 1000; prune_enrich_method=PruneEnrichMethod.STANDARD
 
 ```
 
-In order to use your own model, define it as a type deriving from `RosenbluthSampleable` and implement methods for `atmosphere`, `size` and `grow!`.
+To use your own model, define it as a type deriving from `RosenbluthSampleable` and implement methods for `atmosphere`, `size` and `grow!`.
 
 ```julia
 using Rosenbluth
